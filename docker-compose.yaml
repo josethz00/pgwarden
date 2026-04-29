@@ -3,6 +3,10 @@ services:
     image: timescale/timescaledb:latest-pg17
     container_name: pgwarden_db
     restart: unless-stopped
+    command:
+      - "postgres"
+      - "-c"
+      - "timescaledb.enable_chunk_skipping=on"
     env_file:
       - .env
     environment:
@@ -39,9 +43,11 @@ services:
       - pgwarden_network
 
   api:
+    # build context is the project root because the api image bakes in the
+    # SPA from frontend/. dockerfile path is relative to that root.
     build:
-      context: ./api
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: api/Dockerfile
     command: [ "gunicorn", "main:app", "-k", "uvicorn.workers.UvicornWorker", "-w", "2", "-b", "0.0.0.0:8080", "--timeout", "120" ]
     container_name: pgwarden_api
     restart: unless-stopped

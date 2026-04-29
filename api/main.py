@@ -2,7 +2,8 @@ import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from passlib.context import CryptContext
 
 from app.auth.router import router as auth_router
@@ -112,4 +113,32 @@ app.include_router(locks_router, prefix="/v1")
 app.include_router(db_config_router, prefix="/v1")
 app.include_router(srv_config_router, prefix="/v1")
 app.include_router(srv_metrics_router, prefix="/v1")
+
+
+# serve the SPA from the same origin as the api. /v1/* and /docs are
+# already registered above and starlette matches in registration order, so
+# the catch-all below only fires for paths that didn't match an api route.
+# the directory is populated at image build time by the frontend-build stage
+# in api/Dockerfile; if it's missing (e.g. running tests locally without a
+# build) we just skip mounting and the api still works on its own.
+_static_dir = os.path.join(os.path.dirname(__file__), "static")
+if os.path.isdir(_static_dir):
+    _assets_dir = os.path.join(_static_dir, "assets")
+    if os.path.isdir(_assets_dir):
+        # vite emits hashed filenames into /assets/* so they can be cached
+        # forever; we let starlette stream them directly.
+        app.mount("/assets", StaticFiles(directory=_assets_dir), name="assets")
+
+    _index_html = os.path.join(_static_dir, "index.html")
+
+    @app.get("/{full_path:path}", include_in_schema=False)
+    async def spa(full_path: str):
+        # serve a literal file under static/ if it exists (vite.svg, robots.txt,
+        # favicon.ico, etc.) -- otherwise fall back to index.html so client-side
+        # routes (tanstack-router) survive a hard refresh.
+        if full_path:
+            candidate = os.path.normpath(os.path.join(_static_dir, full_path))
+            if candidate.startswith(_static_dir) and os.path.isfile(candidate):
+                return FileResponse(candidate)
+        return FileResponse(_index_html)
 

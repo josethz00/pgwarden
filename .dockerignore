@@ -1,0 +1,43 @@
+# root-level dockerignore. used by the api build (context: .) so the SPA
+# build stage doesn't pull in node_modules / dist / venvs from the host.
+
+# vcs + editor
+.git
+.gitignore
+.idea
+.vscode
+.DS_Store
+
+# secrets and per-host config
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# python
+**/__pycache__
+**/*.pyc
+**/.venv
+**/.pytest_cache
+**/.ruff_cache
+**/.mypy_cache
+
+# node / vite
+**/node_modules
+**/dist
+**/dist-ssr
+**/.vite
+**/*.tsbuildinfo
+
+# logs and runtime artifacts
+log
+logs
+*.log
+test-results
+
+# infra files we don't want shipped into the image
+docker-compose*.yaml
+**/Dockerfile
+**/.dockerignore

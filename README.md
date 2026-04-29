@@ -43,14 +43,36 @@ PGWarden uses Docker and Docker Compose to make deployment seamless.
    *Make sure you define a strong `ENCRYPTION_KEY`. This key will be used by the API and the Collector to securely encrypt and decrypt the credentials of your monitored remote servers!*
 
 3. **Start the Application**
-   Run the full stack (TimescaleDB, Backend API, Collector, Migrations, and WebUI) using Docker Compose:
+   Run the full stack (TimescaleDB, Backend API + bundled Web UI, Collector, Migrations) with one command:
    ```bash
    docker compose up -d --build
    ```
 
 4. **Access the Dashboards**
-   - **Web UI:** Open your browser and navigate to `http://localhost:3000` (or the port defined in your setup) to access the main PGWarden observation dashboard.
-   - **API Documentation:** You can explore the REST API via the built-in Swagger UI at `http://localhost:8080/docs`.
+   The Web UI and the API are served by the same container on the same port (the SPA is baked into the api image at build time and served alongside `/v1/*`):
+
+   | What                | URL                                               |
+   |---------------------|---------------------------------------------------|
+   | Web UI              | http://localhost:8080                             |
+   | REST API base       | http://localhost:8080/v1                          |
+   | Swagger / API docs  | http://localhost:8080/docs                        |
+   | OpenAPI schema      | http://localhost:8080/openapi.json                |
+
+   If you set `API_PORT` in `.env`, swap `8080` for that value. Default login (override via `PGWARDEN_EMAIL` / `PGWARDEN_PASSWORD` in `.env`):
+
+   ```text
+   email:    admin@pgwarden.com
+   password: admin
+   ```
+
+5. **Working on the frontend**
+   The compose stack ships a built bundle. To iterate on the UI with HMR, run the Vite dev server alongside the dockerized api:
+   ```bash
+   cd frontend
+   npm install
+   npm run dev   # serves http://localhost:5173
+   ```
+   The dev server proxies `/v1/*` to the api on `http://localhost:8080`, so it's same-origin (no CORS) just like the production bundle.
 
 ## ⚙️ Architecture
 
@@ -59,8 +81,7 @@ PGWarden is composed of several independent but heavily integrated services:
 - **Database (TimescaleDB/PostgreSQL):** Stores both the application state (registered servers, auth, configuration) and the collected time-series metrics.
 - **Collector:** A continuous, asynchronous python worker that spans out to all registered target databases, polls their states based on a configurable interval, and pushes the data back to the central database.
 - **Migrations Service:** Automatically manages the central schema structure upon startup.
-- **REST API:** A FastAPI service handling authentication, target registration, config loading, and data serving for the frontend.
-- **Web UI:** The main dashboard enabling interaction with the collected metrics and schema history.
+- **REST API + Web UI:** A FastAPI service handling authentication, target registration, config loading, and data serving. The React SPA is built as a stage of the api image and served by FastAPI itself at `/`, so the api and the dashboard share one container, one port, and one origin (no CORS, no reverse proxy).
 
 ## 🤝 Contributing
 

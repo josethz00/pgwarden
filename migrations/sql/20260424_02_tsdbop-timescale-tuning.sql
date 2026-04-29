@@ -116,15 +116,17 @@ ALTER TABLE "metric"."disk" SET (
 
 -- and the policies that actually run the conversion to column store form. lock/io are converted
 -- after 3 days because they're the chattiest; the rest can wait a week.
-SELECT add_columnstore_policy('metric.session', after => INTERVAL '7 days');
-SELECT add_columnstore_policy('metric.lock',    after => INTERVAL '3 days');
-SELECT add_columnstore_policy('metric.io',      after => INTERVAL '3 days');
-SELECT add_columnstore_policy('metric.cpu',     after => INTERVAL '7 days');
-SELECT add_columnstore_policy('metric.ram',     after => INTERVAL '7 days');
-SELECT add_columnstore_policy('metric.disk',    after => INTERVAL '7 days');
-SELECT add_columnstore_policy('metric.table',   after => INTERVAL '7 days');
-SELECT add_columnstore_policy('metric.index',   after => INTERVAL '7 days');
-SELECT add_columnstore_policy('metric.column',  after => INTERVAL '7 days');
+-- note: add_columnstore_policy is a PROCEDURE in timescaledb >= 2.18, so CALL,
+-- not SELECT. same goes for remove_columnstore_policy in the rollback.
+CALL add_columnstore_policy('metric.session', after => INTERVAL '7 days');
+CALL add_columnstore_policy('metric.lock',    after => INTERVAL '3 days');
+CALL add_columnstore_policy('metric.io',      after => INTERVAL '3 days');
+CALL add_columnstore_policy('metric.cpu',     after => INTERVAL '7 days');
+CALL add_columnstore_policy('metric.ram',     after => INTERVAL '7 days');
+CALL add_columnstore_policy('metric.disk',    after => INTERVAL '7 days');
+CALL add_columnstore_policy('metric.table',   after => INTERVAL '7 days');
+CALL add_columnstore_policy('metric.index',   after => INTERVAL '7 days');
+CALL add_columnstore_policy('metric.column',  after => INTERVAL '7 days');
 
 
 -- retention ------------------------------------------------------------------
